@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { type ReactNode, useState, useEffect } from "react"
 import type { WindowId, DragState, ResizeState } from "@/data/windows"
 import type { WindowState } from "@/data/windows"
 import { WindowControls } from "@/components/ui/window-controls"
@@ -33,6 +33,19 @@ export function FloatingWindow({
   windows,
   children,
 }: FloatingWindowProps) {
+  const [vw, setVw] = useState(0)
+  const [vh, setVh] = useState(0)
+
+  useEffect(() => {
+    const update = () => {
+      setVw(window.innerWidth)
+      setVh(window.innerHeight)
+    }
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }, [])
+
   const handleDragStart = (e: React.PointerEvent) => {
     if (win.isMaximized) return
     e.preventDefault()
@@ -60,35 +73,43 @@ export function FloatingWindow({
     }
   }
 
+  const pad = isMobile ? 4 : 32
+  const taskbarH = 40
+  const bottomPad = pad + taskbarH
+
+  const maximizedStyle = {
+    top: pad,
+    left: pad,
+    width: Math.max(0, vw - pad * 2),
+    height: Math.max(0, vh - pad - bottomPad),
+  }
+
+  const normalStyle = {
+    top: win.top,
+    left: win.left,
+    width: win.width > 0 ? win.width : 0,
+    height: win.height > 0 ? win.height : 0,
+  }
+
+  const posStyle = win.isMaximized ? maximizedStyle : normalStyle
+
   return (
     <div
       onClick={() => onBringToFront(win.id)}
       className={`fixed rounded-md border-2 border-[#1b1b3a] bg-[#d7dde8] shadow-[4px_4px_0px_#1b1b3a] flex flex-col overflow-hidden ${
-        isAnimating ? "animate-window-open" : ""
+        isAnimating ? "animate-window-open" : "transition-[top,left,width,height] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
       }`}
       style={{
         zIndex: win.zIndex,
         visibility: "visible" as const,
-        ...(win.isMaximized
-          ? {
-              top: isMobile ? "0.25rem" : "2rem",
-              left: isMobile ? "0.25rem" : "2rem",
-              right: isMobile ? "0.25rem" : "2rem",
-              bottom: isMobile ? "3rem" : "2rem",
-              width: undefined as unknown as string,
-              height: undefined as unknown as string,
-            }
-          : {
-              top: `${win.top}px`,
-              left: `${win.left}px`,
-              width: win.width > 0 ? `${win.width}px` : undefined,
-              maxWidth: isMobile ? "calc(100vw - 16px)" : undefined,
-              height: win.height > 0 ? `${win.height}px` : undefined,
-              maxHeight: "80vh",
-            }),
+        top: `${posStyle.top}px`,
+        left: `${posStyle.left}px`,
+        width: posStyle.width != null && posStyle.width > 0 ? `${posStyle.width}px` : undefined,
+        height: posStyle.height != null && posStyle.height > 0 ? `${posStyle.height}px` : undefined,
+        maxWidth: win.isMaximized ? undefined : isMobile ? "calc(100vw - 16px)" : undefined,
+        maxHeight: win.isMaximized ? undefined : "80vh",
       }}
     >
-      {/* Title Bar */}
       <div
         className="flex items-center justify-between border-b-2 border-[#1b1b3a] bg-[#8ed1fc] px-3 py-1.5 cursor-move active:bg-[#ff8fcf] select-none touch-none"
         onDoubleClick={() => onToggleMaximize(win.id)}
@@ -107,12 +128,10 @@ export function FloatingWindow({
         />
       </div>
 
-      {/* Scrollable Body */}
       <div className="flex-1 overflow-y-auto p-4 bg-[#d7dde8]">
         {children}
       </div>
 
-      {/* Resize Handle */}
       {!win.isMaximized && <ResizeHandle onResizeStart={handleResizeStart} />}
     </div>
   )
