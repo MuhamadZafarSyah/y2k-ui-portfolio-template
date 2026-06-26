@@ -115,8 +115,12 @@ export default function Home() {
               win={w}
               isMobile={win.isMobile}
               isAnimating={win.animatingIn.has(w.id)}
+              isDragging={win.isDragging}
+              isResizing={win.isResizing}
               dragState={win.dragState}
               resizeState={win.resizeState}
+              startDrag={win.startDrag}
+              startResize={win.startResize}
               windows={win.windows}
               onBringToFront={win.bringToFront}
               onToggleMaximize={win.toggleMaximize}

@@ -19,6 +19,8 @@ export function useWindows() {
   const dragState = useRef<DragState | null>(null)
   const resizeState = useRef<ResizeState | null>(null)
   const animTimers = useRef<Map<WindowId, ReturnType<typeof setTimeout>>>(new Map())
+  const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -48,13 +50,28 @@ export function useWindows() {
         )
       }
     }
-    const handlePointerUp = () => { dragState.current = null; resizeState.current = null }
+    const handlePointerUp = () => {
+      dragState.current = null
+      resizeState.current = null
+      setIsDragging(false)
+      setIsResizing(false)
+    }
     window.addEventListener("pointermove", handlePointerMove)
     window.addEventListener("pointerup", handlePointerUp)
     return () => {
       window.removeEventListener("pointermove", handlePointerMove)
       window.removeEventListener("pointerup", handlePointerUp)
     }
+  }, [])
+
+  const startDrag = useCallback((state: DragState) => {
+    dragState.current = state
+    setIsDragging(true)
+  }, [])
+
+  const startResize = useCallback((state: ResizeState) => {
+    resizeState.current = state
+    setIsResizing(true)
   }, [])
 
   const bringToFront = useCallback((id: WindowId) => {
@@ -103,6 +120,10 @@ export function useWindows() {
     isMobile,
     dragState,
     resizeState,
+    isDragging,
+    isResizing,
+    startDrag,
+    startResize,
     bringToFront,
     toggleWindow,
     toggleMaximize,

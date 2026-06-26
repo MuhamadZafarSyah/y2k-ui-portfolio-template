@@ -10,8 +10,12 @@ interface FloatingWindowProps {
   win: WindowState
   isMobile: boolean
   isAnimating: boolean
+  isDragging: boolean
+  isResizing: boolean
   dragState: React.RefObject<DragState | null>
   resizeState: React.RefObject<ResizeState | null>
+  startDrag: (state: DragState) => void
+  startResize: (state: ResizeState) => void
   onBringToFront: (id: WindowId) => void
   onToggleMaximize: (id: WindowId) => void
   onMinimize: (id: WindowId) => void
@@ -24,8 +28,12 @@ export function FloatingWindow({
   win,
   isMobile,
   isAnimating,
+  isDragging,
+  isResizing,
   dragState,
   resizeState,
+  startDrag,
+  startResize,
   onBringToFront,
   onToggleMaximize,
   onMinimize,
@@ -49,14 +57,15 @@ export function FloatingWindow({
   const handleDragStart = (e: React.PointerEvent) => {
     if (win.isMaximized) return
     e.preventDefault()
+    onBringToFront(win.id)
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    dragState.current = {
+    startDrag({
       windowId: win.id,
       startMouseX: e.clientX,
       startMouseY: e.clientY,
       startLeft: win.left,
       startTop: win.top,
-    }
+    })
   }
 
   const handleResizeStart = (e: React.PointerEvent) => {
@@ -64,13 +73,13 @@ export function FloatingWindow({
     e.preventDefault()
     e.stopPropagation()
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    resizeState.current = {
+    startResize({
       windowId: win.id,
       startMouseX: e.clientX,
       startMouseY: e.clientY,
       startWidth: win.width || 440,
       startHeight: win.height || 320,
-    }
+    })
   }
 
   const pad = isMobile ? 4 : 32
@@ -92,12 +101,17 @@ export function FloatingWindow({
   }
 
   const posStyle = win.isMaximized ? maximizedStyle : normalStyle
+  const isMoving = isDragging || isResizing
 
   return (
     <div
       onClick={() => onBringToFront(win.id)}
       className={`fixed rounded-md border-2 border-[#1b1b3a] bg-[#d7dde8] shadow-[4px_4px_0px_#1b1b3a] flex flex-col overflow-hidden ${
-        isAnimating ? "animate-window-open" : "transition-[top,left,width,height] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+        isAnimating
+          ? "animate-window-open"
+          : isMoving
+            ? ""
+            : "transition-[top,left,width,height] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
       }`}
       style={{
         zIndex: win.zIndex,
